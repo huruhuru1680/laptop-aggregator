@@ -468,8 +468,9 @@ export class Normalizer {
 
   analyzeConfidence(result: NormalizationResult, threshold: number = 0.7): ConfidenceAnalysis {
     const lowConfidenceFields: Array<{ field: string; score: number; source: string }> = [];
+    const confidenceEntries = Object.entries(result.confidence) as Array<[keyof CanonicalLaptop, number]>;
 
-    for (const [field, score] of Object.entries(result.confidence)) {
+    for (const [field, score] of confidenceEntries) {
       if (score < threshold) {
         const source = result.extraction_notes.find(n => n.toLowerCase().includes(field.toLowerCase())) || 'unknown';
         lowConfidenceFields.push({ field, score, source });
@@ -498,7 +499,7 @@ export class Normalizer {
     const averageConfidence = Math.round(overallConfidences.reduce((a, b) => a + b, 0) / results.length);
     const productsAbove80 = overallConfidences.filter(c => c >= 80).length;
 
-    const fieldNames = Object.keys(results[0].confidence);
+    const fieldNames = Object.keys(results[0].confidence) as Array<keyof CanonicalLaptop>;
     const fieldAnalysis = fieldNames.map(field => {
       const scores = results.map(r => r.confidence[field] || 0);
       const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
