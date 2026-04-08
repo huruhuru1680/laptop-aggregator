@@ -169,6 +169,20 @@
   font-weight: 600;
 }
 
+.spec-value.differs {
+  background: #fef3c7;
+}
+
+.row-differs .spec-label {
+  color: #92400e;
+}
+
+.diff-indicator {
+  margin-left: 0.5rem;
+  color: #f59e0b;
+  font-weight: 700;
+}
+
 .best-badge {
   display: block;
   font-size: 0.7rem;
@@ -243,9 +257,67 @@
 }
 
 @media (max-width: 768px) {
+  .comparison-page {
+    padding: 1rem 0.5rem;
+  }
+
   .comparison-header {
     flex-direction: column;
     align-items: flex-start;
+    padding: 0 1rem;
+  }
+
+  .comparison-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .comparison-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .share-btn,
+  .clear-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .comparison-table-wrapper {
+    margin: 0 0.5rem;
+    border-radius: 8px;
+  }
+
+  .comparison-table {
+    min-width: 500px;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .laptop-header {
+    min-width: 160px;
+  }
+
+  .laptop-thumb {
+    width: 70px;
+    height: 52px;
+  }
+
+  .laptop-name {
+    font-size: 0.75rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .spec-header {
+    width: 100px;
+    font-size: 0.7rem;
+  }
+
+  .spec-label {
+    font-size: 0.8rem;
   }
 
   .share-url {
@@ -254,6 +326,31 @@
 
   .share-url input {
     width: 100%;
-    max-width: 300px;
+    max-width: 100%;
+  }
+
+  .comparison-footer {
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .comparison-table {
+    min-width: 400px;
+  }
+
+  .laptop-header {
+    min-width: 140px;
+  }
+
+  .laptop-thumb {
+    width: 60px;
+    height: 45px;
+  }
+
+  .remove-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 0.85rem;
   }
 }

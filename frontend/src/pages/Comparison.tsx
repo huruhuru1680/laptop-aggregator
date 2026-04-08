@@ -144,6 +144,15 @@ export function Comparison() {
     return value === best;
   };
 
+  const hasDifferences = (key: string): boolean => {
+    const values = laptops.map(l => {
+      const v = l[key as keyof CanonicalLaptop];
+      return v === null || v === undefined ? null : String(v);
+    });
+    const uniqueValues = new Set(values.filter(v => v !== null));
+    return uniqueValues.size > 1;
+  };
+
   if (loading) {
     return (
       <div className="comparison-loading">
@@ -207,16 +216,21 @@ export function Comparison() {
             </tr>
           </thead>
           <tbody>
-            {specs.map(spec => (
-              <tr key={spec.key}>
-                <th className="spec-label">{spec.label}</th>
+            {specs.map(spec => {
+              const differs = hasDifferences(spec.key);
+              return (
+              <tr key={spec.key} className={differs ? 'row-differs' : ''}>
+                <th className="spec-label">
+                  {spec.label}
+                  {differs && <span className="diff-indicator" title="Values differ across laptops">≠</span>}
+                </th>
                 {laptops.map(laptop => {
                   const value = getSpecValue(laptop, spec.key);
                   const best = isBest(laptop, spec.key);
                   return (
                     <td
                       key={laptop.id}
-                      className={`spec-value ${best ? 'best' : ''}`}
+                      className={`spec-value ${best ? 'best' : ''} ${differs ? 'differs' : ''}`}
                     >
                       {value || (spec.key !== 'price' ? '—' : formatPrice(0))}
                       {best && spec.key !== 'price' && <span className="best-badge">★ Best</span>}
@@ -224,7 +238,8 @@ export function Comparison() {
                   );
                 })}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
