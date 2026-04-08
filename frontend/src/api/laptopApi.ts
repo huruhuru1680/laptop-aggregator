@@ -1,7 +1,214 @@
 import type { CanonicalLaptop, LaptopFilters, SearchResult, SortOption } from '../types';
-import { mockLaptops } from './mockData';
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const API_BASE = 'http://localhost:3000';
+
+interface BackendLaptop {
+  id: number;
+  brand: string;
+  model_family: string | null;
+  model_name: string;
+  cpu: string;
+  gpu: string;
+  ram: number;
+  ram_type: string | null;
+  storage: number;
+  storage_type: string;
+  display_size: string;
+  display_resolution: string | null;
+  refresh_rate: number | null;
+  panel_type: string | null;
+  weight: string | null;
+  os: string | null;
+  price: number;
+  original_price: number | null;
+  discount_percent: number | null;
+  seller: string | null;
+  rating: string | null;
+  review_count: number | null;
+  availability: string | null;
+  product_url: string;
+  image_url: string | null;
+  source: 'amazon_in' | 'flipkart';
+  source_sku: string;
+  last_seen: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendResponse {
+  success: boolean;
+  data: BackendLaptop[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+  cached?: boolean;
+}
+
+function transformLaptop(laptop: BackendLaptop): CanonicalLaptop {
+  return {
+    id: String(laptop.id),
+    brand: laptop.brand,
+    model_family: laptop.model_family,
+    model_name: laptop.model_name,
+    cpu: laptop.cpu,
+    gpu: laptop.gpu,
+    ram: laptop.ram,
+    ram_type: laptop.ram_type,
+    storage: laptop.storage,
+    storage_type: laptop.storage_type,
+    display_size: parseFloat(laptop.display_size) || 0,
+    display_resolution: laptop.display_resolution,
+    refresh_rate: laptop.refresh_rate,
+    panel_type: laptop.panel_type,
+    weight: laptop.weight ? parseFloat(laptop.weight) : null,
+    os: laptop.os,
+    price: laptop.price,
+    original_price: laptop.original_price,
+    discount_percent: laptop.discount_percent,
+    seller: laptop.seller,
+    rating: laptop.rating ? parseFloat(laptop.rating) : null,
+    review_count: laptop.review_count,
+    availability: laptop.availability,
+    product_url: laptop.product_url,
+    image_url: laptop.image_url,
+    source: laptop.source,
+    source_sku: laptop.source_sku,
+    last_seen: laptop.last_seen,
+  };
+}
+
+function transformSortOption(sort: SortOption): { sortField: string; sortOrder: 'asc' | 'desc' } {
+  switch (sort) {
+    case 'price_asc':
+      return { sortField: 'price', sortOrder: 'asc' };
+    case 'price_desc':
+      return { sortField: 'price', sortOrder: 'desc' };
+    case 'rating_desc':
+      return { sortField: 'rating', sortOrder: 'desc' };
+    case 'review_count_desc':
+      return { sortField: 'review_count', sortOrder: 'desc' };
+    case 'name_asc':
+      return { sortField: 'brand', sortOrder: 'asc' };
+    default:
+      return { sortField: 'price', sortOrder: 'asc' };
+  }
+}
+
+function buildQueryParams(query: string, filters: Partial<LaptopFilters>, sort: SortOption, page: number, pageSize: number): URLSearchParams {
+  const params = new URLSearchParams();
+
+  if (query) {
+    params.set('search', query);
+  }
+
+  if (filters.brands && filters.brands.length > 0) {
+    params.set('brand', filters.brands.join(','));
+  }
+
+  if (filters.sources && filters.sources.length > 0) {
+    params.set('source', filters.sources.join(','));
+  }
+
+  if (filters.priceRange) {
+    params.set('priceMin', String(filters.priceRange[0]));
+    params.set('priceMax', String(filters.priceRange[1]));
+  }
+
+  if (filters.ram && filters.ram.length > 0) {
+    const minRam = Math.min(...filters.ram);
+    const maxRam = Math.max(...filters.ram);
+    params.set('ramMin', String(minRam));
+    params.set('ramMax', String(maxRam));
+  }
+
+  if (filters.storage && filters.storage.length > 0) {
+    const minStorage = Math.min(...filters.storage);
+    const maxStorage = Math.max(...filters.storage) + 256;
+    params.set('storageMin', String(minStorage));
+    params.set('storageMax', String(maxStorage));
+  }
+
+  if (filters.displaySizes && filters.displaySizes.length > 0) {
+    const minDisplay = Math.min(...filters.displaySizes);
+    const maxDisplay = Math.max(...filters.displaySizes) + 1;
+    params.set('displaySizeMin', String(minDisplay));
+    params.set('displaySizeMax', String(maxDisplay));
+  }
+
+  const { sortField, sortOrder } = transformSortOption(sort);
+  params.set('sortField', sortField);
+  params.set('sortOrder', sortOrder);
+
+  params.set('page', String(page));
+  params.set('pageSize', String(pageSize));
+
+  return params;
+}
+
+export async function searchLaptops(
+  query: string = '',
+  filters: Partial<LaptopFilters> = {},
+  sort: SortOption = 'price_asc',
+  page: number = 1,
+  pageSize: number = 12
+): Promise<SearchResult> {
+  const params = buildQueryParams(query, filters, sort, page, pageSize);
+  const url = `${API_BASE}/api/laptops?${params.toString()}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const result: BackendResponse = await response.json();
+
+  return {
+    laptops: result.data.map(transformLaptop),
+    total: result.pagination.total,
+    page: result.pagination.page,
+    pageSize: result.pagination.pageSize,
+    facets: {
+      brands: [],
+      cpuBrands: [],
+      gpuBrands: [],
+      ram: [],
+      storage: [],
+      displaySizes: [],
+      refreshRates: [],
+      sources: [],
+    },
+  };
+}
+
+export async function getLaptopById(id: string): Promise<CanonicalLaptop | null> {
+  const url = `${API_BASE}/api/laptops?page=1&pageSize=100`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const result: BackendResponse = await response.json();
+  const laptop = result.data.find(l => String(l.id) === id);
+  return laptop ? transformLaptop(laptop) : null;
+}
+
+export async function getLaptopsByIds(ids: string[]): Promise<CanonicalLaptop[]> {
+  const url = `${API_BASE}/api/laptops?page=1&pageSize=100`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const result: BackendResponse = await response.json();
+  return result.data
+    .filter(l => ids.includes(String(l.id)))
+    .map(transformLaptop);
+}
 
 function extractCpuBrand(cpu: string): string {
   if (cpu.includes('Intel Core i9')) return 'Intel Core i9';
@@ -30,165 +237,6 @@ function extractGpuBrand(gpu: string): string {
   if (gpu.includes('Apple M3')) return 'Apple M3';
   if (gpu.includes('Apple M2')) return 'Apple M2';
   return 'Other';
-}
-
-function normalizeFilter(filters: Partial<LaptopFilters>): LaptopFilters {
-  return {
-    brands: filters.brands || [],
-    cpuBrands: filters.cpuBrands || [],
-    cpuModels: filters.cpuModels || [],
-    gpuBrands: filters.gpuBrands || [],
-    gpuModels: filters.gpuModels || [],
-    ram: filters.ram || [],
-    storage: filters.storage || [],
-    storageTypes: filters.storageTypes || [],
-    displaySizes: filters.displaySizes || [],
-    refreshRates: filters.refreshRates || [],
-    priceRange: filters.priceRange || [0, 500000],
-    weightRange: filters.weightRange || [0, 10],
-    sources: filters.sources || [],
-  };
-}
-
-function matchesFilters(laptop: CanonicalLaptop, filters: LaptopFilters): boolean {
-  if (filters.brands.length > 0 && !filters.brands.includes(laptop.brand)) return false;
-
-  const cpuBrand = extractCpuBrand(laptop.cpu);
-  if (filters.cpuBrands.length > 0 && !filters.cpuBrands.includes(cpuBrand)) return false;
-
-  const gpuBrand = extractGpuBrand(laptop.gpu);
-  if (filters.gpuBrands.length > 0 && !filters.gpuBrands.includes(gpuBrand)) return false;
-
-  if (filters.ram.length > 0 && !filters.ram.includes(laptop.ram)) return false;
-
-  if (filters.storage.length > 0 && !filters.storage.some(s => laptop.storage >= s && laptop.storage < s + 256)) return false;
-
-  if (filters.displaySizes.length > 0 && !filters.displaySizes.some(ds => Math.abs(laptop.display_size - ds) < 0.5)) return false;
-
-  if (filters.refreshRates.length > 0 && laptop.refresh_rate !== null && !filters.refreshRates.includes(laptop.refresh_rate)) return false;
-
-  if (filters.priceRange && (laptop.price < filters.priceRange[0] || laptop.price > filters.priceRange[1])) return false;
-
-  if (filters.weightRange && (laptop.weight === null || laptop.weight < filters.weightRange[0] || laptop.weight > filters.weightRange[1])) return false;
-
-  if (filters.sources.length > 0 && !filters.sources.includes(laptop.source)) return false;
-
-  return true;
-}
-
-function sortLaptops(laptops: CanonicalLaptop[], sort: SortOption): CanonicalLaptop[] {
-  const sorted = [...laptops];
-  switch (sort) {
-    case 'price_asc':
-      return sorted.sort((a, b) => a.price - b.price);
-    case 'price_desc':
-      return sorted.sort((a, b) => b.price - a.price);
-    case 'rating_desc':
-      return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-    case 'review_count_desc':
-      return sorted.sort((a, b) => (b.review_count || 0) - (a.review_count || 0));
-    case 'name_asc':
-      return sorted.sort((a, b) => a.model_name.localeCompare(b.model_name));
-    default:
-      return sorted;
-  }
-}
-
-function computeFacets(laptops: CanonicalLaptop[]) {
-  const brandCounts: Record<string, number> = {};
-  const cpuBrandCounts: Record<string, number> = {};
-  const gpuBrandCounts: Record<string, number> = {};
-  const ramCounts: Record<number, number> = {};
-  const storageCounts: Record<number, number> = {};
-  const displaySizeCounts: Record<number, number> = {};
-  const refreshRateCounts: Record<number, number> = {};
-  const sourceCounts: Record<string, number> = {};
-
-  laptops.forEach(laptop => {
-    brandCounts[laptop.brand] = (brandCounts[laptop.brand] || 0) + 1;
-
-    const cpuBrand = extractCpuBrand(laptop.cpu);
-    cpuBrandCounts[cpuBrand] = (cpuBrandCounts[cpuBrand] || 0) + 1;
-
-    const gpuBrand = extractGpuBrand(laptop.gpu);
-    gpuBrandCounts[gpuBrand] = (gpuBrandCounts[gpuBrand] || 0) + 1;
-
-    ramCounts[laptop.ram] = (ramCounts[laptop.ram] || 0) + 1;
-
-    const storageBucket = Math.floor(laptop.storage / 256) * 256;
-    storageCounts[storageBucket] = (storageCounts[storageBucket] || 0) + 1;
-
-    const displayBucket = Math.round(laptop.display_size);
-    displaySizeCounts[displayBucket] = (displaySizeCounts[displayBucket] || 0) + 1;
-
-    if (laptop.refresh_rate) {
-      refreshRateCounts[laptop.refresh_rate] = (refreshRateCounts[laptop.refresh_rate] || 0) + 1;
-    }
-
-    sourceCounts[laptop.source] = (sourceCounts[laptop.source] || 0) + 1;
-  });
-
-  return {
-    brands: Object.entries(brandCounts).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-    cpuBrands: Object.entries(cpuBrandCounts).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-    gpuBrands: Object.entries(gpuBrandCounts).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-    ram: Object.entries(ramCounts).map(([value, count]) => ({ value: parseInt(value), count })).sort((a, b) => a.value - b.value),
-    storage: Object.entries(storageCounts).map(([value, count]) => ({ value: parseInt(value), count })).sort((a, b) => a.value - b.value),
-    displaySizes: Object.entries(displaySizeCounts).map(([value, count]) => ({ value: parseInt(value), count })).sort((a, b) => a.value - b.value),
-    refreshRates: Object.entries(refreshRateCounts).map(([value, count]) => ({ value: parseInt(value), count })).sort((a, b) => a.value - b.value),
-    sources: Object.entries(sourceCounts).map(([value, count]) => ({ value, count })).sort((a, b) => b.count - a.count),
-  };
-}
-
-export async function searchLaptops(
-  query: string = '',
-  filters: Partial<LaptopFilters> = {},
-  sort: SortOption = 'price_asc',
-  page: number = 1,
-  pageSize: number = 12
-): Promise<SearchResult> {
-  await delay(300);
-
-  let filtered = mockLaptops.filter(laptop => {
-    if (query) {
-      const q = query.toLowerCase();
-      return (
-        laptop.brand.toLowerCase().includes(q) ||
-        laptop.model_name.toLowerCase().includes(q) ||
-        laptop.cpu.toLowerCase().includes(q) ||
-        laptop.gpu.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
-
-  const normalizedFilters = normalizeFilter(filters);
-  filtered = filtered.filter(laptop => matchesFilters(laptop, normalizedFilters));
-
-  const facets = computeFacets(filtered);
-
-  const sorted = sortLaptops(filtered, sort);
-
-  const start = (page - 1) * pageSize;
-  const paginated = sorted.slice(start, start + pageSize);
-
-  return {
-    laptops: paginated,
-    total: filtered.length,
-    page,
-    pageSize,
-    facets,
-  };
-}
-
-export async function getLaptopById(id: string): Promise<CanonicalLaptop | null> {
-  await delay(200);
-  return mockLaptops.find(l => l.id === id) || null;
-}
-
-export async function getLaptopsByIds(ids: string[]): Promise<CanonicalLaptop[]> {
-  await delay(200);
-  return mockLaptops.filter(l => ids.includes(l.id));
 }
 
 export { extractCpuBrand, extractGpuBrand };
