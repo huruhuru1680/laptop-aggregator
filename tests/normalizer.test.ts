@@ -326,4 +326,151 @@ describe('Normalizer', () => {
       expect(overall).toBe(0);
     });
   });
+
+  describe('analyzeConfidence', () => {
+    it('should identify fields below threshold', () => {
+      const page: AmazonProductPage = {
+        asin: 'B0CRKXDX83',
+        url: 'https://www.amazon.in/dp/B0CRKXDX83/',
+        title: 'Dell G15 Gaming Laptop',
+        brand: 'Dell',
+        price: 78490,
+        originalPrice: 105398,
+        discount: 26,
+        rating: 4.0,
+        reviewCount: 1459,
+        seller: 'Clicktech',
+        availability: 'In Stock',
+        imageUrl: 'https://example.com/image.jpg',
+        specs: {
+          'Brand': 'Dell',
+          'CPU Model': 'Core i5',
+          'RAM Memory Installed Size': '16 GB',
+          'Hard Disk Size': '1 TB',
+          'Hard Disk Description': 'SSD',
+          'Screen Size': '15.6 Inches',
+          'Native Resolution': '1920 x 1080 pixels',
+          'Refresh Rate': '120 hertz',
+          'Item Weight': '2600 Grams',
+          'Operating System': 'Windows 11 Home',
+          'Graphics Co Processor': 'NVIDIA GeForce RTX 3050',
+        },
+        capturedAt: '2026-04-08T00:00:00Z',
+      };
+
+      const result = normalizer.normalizeAmazonProduct(page);
+      const analysis = normalizer.analyzeConfidence(result, 0.7);
+
+      expect(analysis.overallConfidence).toBeGreaterThanOrEqual(80);
+      expect(analysis.totalFields).toBeGreaterThan(0);
+      expect(analysis.extractionNotes).toBeDefined();
+    });
+
+    it('should report low confidence fields when data is incomplete', () => {
+      const page: AmazonProductPage = {
+        asin: 'TEST123',
+        url: 'https://www.amazon.in/dp/TEST123/',
+        title: 'Generic Laptop',
+        brand: null,
+        price: null,
+        originalPrice: null,
+        discount: null,
+        rating: null,
+        reviewCount: null,
+        seller: null,
+        availability: null,
+        imageUrl: null,
+        specs: {},
+        capturedAt: '2026-04-08T00:00:00Z',
+      };
+
+      const result = normalizer.normalizeAmazonProduct(page);
+      const analysis = normalizer.analyzeConfidence(result, 0.7);
+
+      expect(analysis.overallConfidence).toBeLessThan(70);
+      expect(analysis.lowConfidenceFields.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('aggregateConfidenceAnalysis', () => {
+    it('should aggregate confidence across multiple products', () => {
+      const page1: AmazonProductPage = {
+        asin: 'B0CRKXDX83',
+        url: 'https://www.amazon.in/dp/B0CRKXDX83/',
+        title: 'Dell G15, 13th Gen Intel Core i5, 16GB DDR5, 1TB SSD, RTX 3050, 15.6" FHD 120Hz',
+        brand: 'Dell',
+        price: 78490,
+        originalPrice: 105398,
+        discount: 26,
+        rating: 4.0,
+        reviewCount: 1459,
+        seller: 'Clicktech',
+        availability: 'In Stock',
+        imageUrl: 'https://example.com/image1.jpg',
+        specs: {
+          'Brand': 'Dell',
+          'CPU Model': 'Core i5',
+          'RAM Memory Installed Size': '16 GB',
+          'Hard Disk Size': '1 TB',
+          'Hard Disk Description': 'SSD',
+          'Screen Size': '15.6 Inches',
+          'Native Resolution': '1920 x 1080 pixels',
+          'Refresh Rate': '120 hertz',
+          'Item Weight': '2600 Grams',
+          'Operating System': 'Windows 11 Home',
+          'Graphics Co Processor': 'NVIDIA GeForce RTX 3050',
+        },
+        capturedAt: '2026-04-08T00:00:00Z',
+      };
+
+      const page2: AmazonProductPage = {
+        asin: 'B0ABC123',
+        url: 'https://www.amazon.in/dp/B0ABC123/',
+        title: 'HP Pavilion 15, Intel Core i7, 16GB DDR4, 512GB SSD, 15.6" FHD',
+        brand: 'HP',
+        price: 72990,
+        originalPrice: 94999,
+        discount: 23,
+        rating: 4.2,
+        reviewCount: 892,
+        seller: 'HP Store',
+        availability: 'In Stock',
+        imageUrl: 'https://example.com/image2.jpg',
+        specs: {
+          'Brand': 'HP',
+          'CPU Model': 'Intel Core i7',
+          'RAM Memory Installed Size': '16 GB',
+          'Hard Disk Size': '512 GB',
+          'Hard Disk Description': 'SSD',
+          'Screen Size': '15.6 Inches',
+          'Native Resolution': '1920 x 1080 pixels',
+          'Refresh Rate': '60 hertz',
+          'Item Weight': '1750 Grams',
+          'Operating System': 'Windows 11 Home',
+        },
+        capturedAt: '2026-04-08T00:00:00Z',
+      };
+
+      const results = [
+        normalizer.normalizeAmazonProduct(page1),
+        normalizer.normalizeAmazonProduct(page2),
+      ];
+
+      const aggregation = normalizer.aggregateConfidenceAnalysis(results);
+
+      expect(aggregation.totalProducts).toBe(2);
+      expect(aggregation.productsAbove80).toBeGreaterThanOrEqual(0);
+      expect(aggregation.fieldAnalysis.length).toBeGreaterThan(0);
+      expect(aggregation.averageConfidence).toBeGreaterThan(0);
+    });
+
+    it('should handle empty results', () => {
+      const aggregation = normalizer.aggregateConfidenceAnalysis([]);
+
+      expect(aggregation.totalProducts).toBe(0);
+      expect(aggregation.averageConfidence).toBe(0);
+      expect(aggregation.productsAbove80).toBe(0);
+      expect(aggregation.fieldAnalysis.length).toBe(0);
+    });
+  });
 });
