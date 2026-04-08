@@ -2,7 +2,28 @@ import { CanonicalLaptop, NormalizationResult, ExtractedField } from '../types/c
 import { AmazonProductPage } from '../types/amazon';
 import { FlipkartProductPage } from '../types/flipkart';
 
+const FLIPKART_SPEC_ALIASES: Record<string, string[]> = {
+  'CPU Model': ['Processor', 'CPU'],
+  'Graphics Co Processor': ['Graphics', 'GPU'],
+  'RAM Memory Installed Size': ['RAM', 'System Memory'],
+  'Hard Disk Size': ['Storage', 'Hard Disk Capacity'],
+  'Hard Disk Description': ['Storage Type', 'SSD Type'],
+  'Screen Size': ['Display Size', 'Screen'],
+  'Native Resolution': ['Resolution', 'Display Resolution'],
+  'Refresh Rate': ['Refresh Rate'],
+  'Item Weight': ['Weight', 'Item Weight'],
+  'Operating System': ['OS', 'Operating System'],
+  'Brand': ['Brand'],
+};
+
 export class Normalizer {
+  private getSpec(specs: Record<string, string>, primary: string, alternates: string[] = []): string | null {
+    if (specs[primary]) return specs[primary];
+    for (const alt of alternates) {
+      if (specs[alt]) return specs[alt];
+    }
+    return null;
+  }
   normalizeAmazonProduct(page: AmazonProductPage): NormalizationResult {
     const notes: string[] = [];
     const confidence: Record<string, number> = {};
@@ -159,7 +180,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<string> {
-    const cpuFromSpec = specs['CPU Model'];
+    const cpuFromSpec = this.getSpec(specs, 'CPU Model', FLIPKART_SPEC_ALIASES['CPU Model'] || []);
     if (cpuFromSpec) {
       return { value: cpuFromSpec, confidence: 1.0, source: 'direct' };
     }
@@ -178,7 +199,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<string> {
-    const gpuFromSpec = specs['Graphics Co Processor'];
+    const gpuFromSpec = this.getSpec(specs, 'Graphics Co Processor', FLIPKART_SPEC_ALIASES['Graphics Co Processor'] || []);
     if (gpuFromSpec) {
       return { value: gpuFromSpec, confidence: 1.0, source: 'direct' };
     }
@@ -197,7 +218,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<number> {
-    const ramFromSpec = specs['RAM Memory Installed Size'];
+    const ramFromSpec = this.getSpec(specs, 'RAM Memory Installed Size', FLIPKART_SPEC_ALIASES['RAM Memory Installed Size'] || []);
     if (ramFromSpec) {
       const match = ramFromSpec.match(/(\d+)/);
       if (match) {
@@ -232,7 +253,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<number> {
-    const storageFromSpec = specs['Hard Disk Size'];
+    const storageFromSpec = this.getSpec(specs, 'Hard Disk Size', FLIPKART_SPEC_ALIASES['Hard Disk Size'] || []);
     if (storageFromSpec) {
       const match = storageFromSpec.match(/(\d+)\s*(?:TB|GB)/i);
       if (match) {
@@ -251,7 +272,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<string> {
-    const storageTypeFromSpec = specs['Hard Disk Description'];
+    const storageTypeFromSpec = this.getSpec(specs, 'Hard Disk Description', FLIPKART_SPEC_ALIASES['Hard Disk Description'] || []);
     if (storageTypeFromSpec) {
       const type = storageTypeFromSpec.includes('SSD') ? 'SSD' :
                    storageTypeFromSpec.includes('NVMe') ? 'NVMe SSD' :
@@ -268,7 +289,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<number> {
-    const sizeFromSpec = specs['Screen Size'];
+    const sizeFromSpec = this.getSpec(specs, 'Screen Size', FLIPKART_SPEC_ALIASES['Screen Size'] || []);
     if (sizeFromSpec) {
       const match = sizeFromSpec.match(/([\d.]+)\s*(?:Inches|")/i);
       if (match) {
@@ -289,7 +310,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<string | null> {
-    const resFromSpec = specs['Native Resolution'];
+    const resFromSpec = this.getSpec(specs, 'Native Resolution', FLIPKART_SPEC_ALIASES['Native Resolution'] || []);
     if (resFromSpec) {
       const match = resFromSpec.match(/(\d+)\s*[xX×]\s*(\d+)/);
       if (match) {
@@ -305,7 +326,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<number | null> {
-    const refreshFromSpec = specs['Refresh Rate'];
+    const refreshFromSpec = this.getSpec(specs, 'Refresh Rate', FLIPKART_SPEC_ALIASES['Refresh Rate'] || []);
     if (refreshFromSpec) {
       const match = refreshFromSpec.match(/(\d+)\s*(?:Hz|hertz)/i);
       if (match) {
@@ -334,7 +355,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<number | null> {
-    const weightFromSpec = specs['Item Weight'];
+    const weightFromSpec = this.getSpec(specs, 'Item Weight', FLIPKART_SPEC_ALIASES['Item Weight'] || []);
     if (weightFromSpec) {
       const match = weightFromSpec.match(/([\d.]+)\s*(?:kg|kilograms|g|grams)/i);
       if (match) {
@@ -353,7 +374,7 @@ export class Normalizer {
     specs: Record<string, string>,
     notes: string[]
   ): ExtractedField<string | null> {
-    const osFromSpec = specs['Operating System'];
+    const osFromSpec = this.getSpec(specs, 'Operating System', FLIPKART_SPEC_ALIASES['Operating System'] || []);
     if (osFromSpec) {
       return { value: osFromSpec, confidence: 1.0, source: 'direct' };
     }
