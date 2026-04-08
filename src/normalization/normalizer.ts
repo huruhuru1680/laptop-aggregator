@@ -291,7 +291,7 @@ export class Normalizer {
   ): ExtractedField<number> {
     const sizeFromSpec = this.getSpec(specs, 'Screen Size', FLIPKART_SPEC_ALIASES['Screen Size'] || []);
     if (sizeFromSpec) {
-      const match = sizeFromSpec.match(/([\d.]+)\s*(?:Inches|")/i);
+      const match = sizeFromSpec.match(/([\d.]+)\s*(?:Inches?|"|\.)/i);
       if (match) {
         return { value: parseFloat(match[1]), confidence: 1.0, source: 'direct' };
       }
