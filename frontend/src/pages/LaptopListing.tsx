@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import { FilterSidebar } from '../components/FilterSidebar';
 import { LaptopCard } from '../components/LaptopCard';
 import { searchLaptops } from '../api/laptopApi';

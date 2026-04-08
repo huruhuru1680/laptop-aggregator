@@ -1,0 +1,47 @@
+groups:
+  - name: laptop-aggregator-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }} errors/sec on {{ $labels.method }} {{ $labels.path }}"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency"
+          description: "p95 latency is {{ $value }}ms on {{ $labels.method }} {{ $labels.path }}"
+
+      - alert: HighCacheMissRate
+        expr: rate(cache_misses_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High cache miss rate"
+          description: "Cache miss rate is {{ $value | humanizePercentage }}"
+
+      - alert: ServiceDown
+        expr: up{job="laptop-aggregator-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service is down"
+          description: "The laptop aggregator API has been down for more than 1 minute"
+
+      - alert: RateLimitActive
+        expr: rate(http_requests_total{status="429"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate limiting is being triggered"
+          description: "{{ $value }} rejected requests/sec due to rate limiting"

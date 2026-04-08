@@ -3,8 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { CatalogStorage } from '../storage/catalog';
 import { createLaptopRouter } from './laptops';
+import { createMetricsRouter } from './metrics';
 import { redisClient } from '../cache';
 import { logger } from '../utils/logger';
+import { metricsMiddleware } from '../utils/metrics';
 
 const RATE_LIMIT_WINDOW_MS = 60000;
 const RATE_LIMIT_MAX_REQUESTS = 100;
@@ -64,6 +66,7 @@ export function createServer(postgresUrl: string): Express {
   app.use(helmet());
   app.use(cors());
   app.use(express.json());
+  app.use(metricsMiddleware);
   app.use(rateLimitMiddleware);
 
   app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -80,6 +83,16 @@ export function createServer(postgresUrl: string): Express {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  app.get('/ready', async (_req: Request, res: Response) => {
+    try {
+      await redisClient.ping();
+      res.json({ status: 'ready', timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(503).json({ status: 'not ready', error: 'Redis unavailable' });
+    }
+  });
+
+  app.use('/metrics', createMetricsRouter());
   app.use('/api/laptops', createLaptopRouter(catalogStorage));
 
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

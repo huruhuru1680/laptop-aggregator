@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import './Header.css';
 
 export function Header() {

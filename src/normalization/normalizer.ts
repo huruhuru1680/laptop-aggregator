@@ -465,4 +465,76 @@ export class Normalizer {
     const avg = values.reduce((a, b) => a + b, 0) / values.length;
     return Math.round(avg * 100);
   }
+
+  analyzeConfidence(result: NormalizationResult, threshold: number = 0.7): ConfidenceAnalysis {
+    const lowConfidenceFields: Array<{ field: string; score: number; source: string }> = [];
+
+    for (const [field, score] of Object.entries(result.confidence)) {
+      if (score < threshold) {
+        const source = result.extraction_notes.find(n => n.toLowerCase().includes(field.toLowerCase())) || 'unknown';
+        lowConfidenceFields.push({ field, score, source });
+      }
+    }
+
+    return {
+      overallConfidence: this.calculateOverallConfidence(result.confidence),
+      lowConfidenceFields,
+      totalFields: Object.keys(result.confidence).length,
+      extractionNotes: result.extraction_notes,
+    };
+  }
+
+  aggregateConfidenceAnalysis(results: NormalizationResult[]): AggregatedConfidenceAnalysis {
+    if (results.length === 0) {
+      return {
+        totalProducts: 0,
+        averageConfidence: 0,
+        productsAbove80: 0,
+        fieldAnalysis: [],
+      };
+    }
+
+    const overallConfidences = results.map(r => this.calculateOverallConfidence(r.confidence));
+    const averageConfidence = Math.round(overallConfidences.reduce((a, b) => a + b, 0) / results.length);
+    const productsAbove80 = overallConfidences.filter(c => c >= 80).length;
+
+    const fieldNames = Object.keys(results[0].confidence);
+    const fieldAnalysis = fieldNames.map(field => {
+      const scores = results.map(r => r.confidence[field] || 0);
+      const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const belowThreshold = scores.filter(s => s < 0.7).length;
+      return {
+        field,
+        averageScore: Math.round(avgScore * 100) / 100,
+        productsBelowThreshold: belowThreshold,
+        percentageBelowThreshold: Math.round((belowThreshold / results.length) * 100),
+      };
+    });
+
+    return {
+      totalProducts: results.length,
+      averageConfidence,
+      productsAbove80,
+      fieldAnalysis: fieldAnalysis.sort((a, b) => a.averageScore - b.averageScore),
+    };
+  }
+}
+
+export interface ConfidenceAnalysis {
+  overallConfidence: number;
+  lowConfidenceFields: Array<{ field: string; score: number; source: string }>;
+  totalFields: number;
+  extractionNotes: string[];
+}
+
+export interface AggregatedConfidenceAnalysis {
+  totalProducts: number;
+  averageConfidence: number;
+  productsAbove80: number;
+  fieldAnalysis: Array<{
+    field: string;
+    averageScore: number;
+    productsBelowThreshold: number;
+    percentageBelowThreshold: number;
+  }>;
 }

@@ -40,6 +40,51 @@ src/
 - `POSTGRES_URL` - PostgreSQL connection (default: `postgresql://localhost:5432/laptop_aggregator`)
 - `LOG_LEVEL` - Log verbosity (default: `info`)
 
+Copy `.env.example` to `.env` and configure for your environment.
+
+## Docker Setup (Local Development)
+
+### Prerequisites
+
+- Docker and Docker Compose installed
+- Ports 5432 (PostgreSQL) and 6379 (Redis) available
+
+### Quick Start
+
+```bash
+# Start PostgreSQL and Redis containers
+docker-compose up -d
+
+# Verify containers are running
+docker-compose ps
+
+# Run database migrations (auto-created on first connection)
+npm run build
+npm start
+
+# Stop containers
+docker-compose down
+```
+
+### Container Details
+
+| Service | Port | Credentials |
+|---------|------|-------------|
+| PostgreSQL | 5432 | user: `laptop_user`, password: `laptop_password`, db: `laptop_aggregator` |
+| Redis | 6379 | No authentication required |
+
+### Troubleshooting
+
+```bash
+# View logs
+docker-compose logs -f postgres
+docker-compose logs -f redis
+
+# Reset data
+docker-compose down -v  # Removes volumes
+docker-compose up -d     # Fresh start
+```
+
 ## Scripts
 
 - `npm run build` - Compile TypeScript

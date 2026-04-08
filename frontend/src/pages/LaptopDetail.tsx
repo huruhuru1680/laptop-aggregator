@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getLaptopById } from '../api/laptopApi';
 import type { CanonicalLaptop } from '../types';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import './LaptopDetail.css';
 
 export function LaptopDetail() {

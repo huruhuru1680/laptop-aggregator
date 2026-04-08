@@ -1,4 +1,4 @@
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import type { SearchResult } from '../types';
 import './FilterSidebar.css';
 

@@ -1,15 +1,15 @@
-import React, { createContext, useContext, useReducer } from 'react';
-import type { ReactNode } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useReducer, type ReactNode } from 'react';
 import type { LaptopFilters } from '../types';
 
-interface AppState {
+export interface AppState {
   filters: LaptopFilters;
   comparisonIds: string[];
   searchQuery: string;
   sortOption: string;
 }
 
-type Action =
+export type Action =
   | { type: 'SET_FILTERS'; payload: Partial<LaptopFilters> }
   | { type: 'RESET_FILTERS' }
   | { type: 'ADD_TO_COMPARISON'; payload: string }
@@ -18,7 +18,7 @@ type Action =
   | { type: 'SET_SEARCH_QUERY'; payload: string }
   | { type: 'SET_SORT'; payload: string };
 
-const initialState: AppState = {
+export const initialState: AppState = {
   filters: {
     brands: [],
     cpuBrands: [],
@@ -38,6 +38,13 @@ const initialState: AppState = {
   searchQuery: '',
   sortOption: 'price_asc',
 };
+
+export interface AppContextType {
+  state: AppState;
+  dispatch: React.Dispatch<Action>;
+}
+
+export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -63,13 +70,6 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-interface AppContextType {
-  state: AppState;
-  dispatch: React.Dispatch<Action>;
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -78,12 +78,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
       {children}
     </AppContext.Provider>
   );
-}
-
-export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within AppProvider');
-  }
-  return context;
 }

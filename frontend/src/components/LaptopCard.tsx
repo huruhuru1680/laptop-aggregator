@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { CanonicalLaptop } from '../types';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import './LaptopCard.css';
 
 interface LaptopCardProps {

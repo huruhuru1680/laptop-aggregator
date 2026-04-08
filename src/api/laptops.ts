@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { cache, CACHE_TTL_SECONDS } from '../cache';
 import { CatalogStorage, LaptopFilter, PaginationOptions, SortOptions } from '../storage/catalog';
 import { logger } from '../utils/logger';
+import { recordCacheHit, recordCacheMiss } from '../utils/metrics';
 
 function generateCacheKey(filter: LaptopFilter, pagination: PaginationOptions, sort: SortOptions): string {
   const keyParts = [
@@ -27,6 +28,7 @@ export function createLaptopRouter(catalogStorage: CatalogStorage): Router {
 
       if (cached) {
         logger.debug('Cache hit', { cacheKey });
+        recordCacheHit();
         const parsed = JSON.parse(cached);
         res.json({
           success: true,
@@ -38,6 +40,7 @@ export function createLaptopRouter(catalogStorage: CatalogStorage): Router {
       }
 
       logger.debug('Cache miss', { cacheKey });
+      recordCacheMiss();
       const result = await catalogStorage.findFiltered(filter, pagination, sort);
 
       await cache.setex(cacheKey, CACHE_TTL_SECONDS, JSON.stringify({

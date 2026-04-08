@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getLaptopsByIds } from '../api/laptopApi';
 import type { CanonicalLaptop } from '../types';
-import { useApp } from '../context/AppContext';
+import { useApp } from '../context/hooks';
 import './Comparison.css';
 
 export function Comparison() {
