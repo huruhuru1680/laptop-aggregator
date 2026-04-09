@@ -77,6 +77,7 @@ export function Comparison() {
   };
 
   const specs = [
+    { key: 'price', label: 'Price' },
     { key: 'cpu', label: 'Processor' },
     { key: 'gpu', label: 'Graphics' },
     { key: 'ram', label: 'RAM' },
@@ -89,10 +90,10 @@ export function Comparison() {
     { key: 'panel_type', label: 'Panel Type' },
     { key: 'weight', label: 'Weight' },
     { key: 'os', label: 'Operating System' },
-    { key: 'price', label: 'Price' },
     { key: 'rating', label: 'Rating' },
     { key: 'review_count', label: 'Reviews' },
     { key: 'availability', label: 'Availability' },
+    { key: 'source', label: 'Source' },
   ];
 
   const getSpecValue = (laptop: CanonicalLaptop, key: string): string | number | null => {
@@ -114,34 +115,40 @@ export function Comparison() {
         return (value as number).toFixed(1);
       case 'review_count':
         return (value as number).toLocaleString();
+      case 'source':
+        return laptop.source === 'amazon_in' ? 'Amazon.in' : 'Flipkart';
       default:
         return value;
     }
   };
 
-  const findBest = (key: string): number | null => {
-    if (key === 'price') {
-      return Math.min(...laptops.map(l => l.price));
-    }
-    if (key === 'weight') {
-      return Math.min(...laptops.filter(l => l.weight !== null).map(l => l.weight as number));
-    }
-    if (['ram', 'storage', 'refresh_rate', 'rating'].includes(key)) {
-      const numericLaptops = laptops.filter(l => l[key as keyof CanonicalLaptop] !== null);
-      if (numericLaptops.length === 0) return null;
-      return Math.max(...numericLaptops.map(l => l[key as keyof CanonicalLaptop] as number));
-    }
-    return null;
-  };
+  const bestValues = (() => {
+    const best: Record<string, number | string | null> = {};
+    if (laptops.length === 0) return best;
+    best.price = Math.min(...laptops.map(l => l.price));
+    const weights = laptops.filter(l => l.weight !== null).map(l => l.weight as number);
+    if (weights.length > 0) best.weight = Math.min(...weights);
+    const rams = laptops.filter(l => l.ram !== null).map(l => l.ram);
+    if (rams.length > 0) best.ram = Math.max(...rams);
+    const storages = laptops.filter(l => l.storage !== null).map(l => l.storage);
+    if (storages.length > 0) best.storage = Math.max(...storages);
+    const rates = laptops.filter(l => l.refresh_rate !== null).map(l => l.refresh_rate as number);
+    if (rates.length > 0) best.refresh_rate = Math.max(...rates);
+    const ratings = laptops.filter(l => l.rating !== null).map(l => l.rating as number);
+    if (ratings.length > 0) best.rating = Math.max(...ratings);
+    return best;
+  })();
 
   const isBest = (laptop: CanonicalLaptop, key: string): boolean => {
-    const best = findBest(key);
-    if (best === null) return false;
-    const value = laptop[key as keyof CanonicalLaptop];
+    const bestVal = bestValues[key];
+    if (bestVal === undefined || bestVal === null) return false;
     if (key === 'price' || key === 'weight') {
-      return value === best;
+      return laptop[key as keyof CanonicalLaptop] === bestVal;
     }
-    return value === best;
+    if (['ram', 'storage', 'refresh_rate', 'rating'].includes(key)) {
+      return laptop[key as keyof CanonicalLaptop] === bestVal;
+    }
+    return false;
   };
 
   const hasDifferences = (key: string): boolean => {

@@ -162,10 +162,11 @@
   font-size: 0.95rem;
   color: #1a1a2e;
   position: relative;
+  transition: background 0.2s;
 }
 
 .spec-value.best {
-  background: #d1fae5;
+  background: #d1fae5 !important;
   font-weight: 600;
 }
 
@@ -173,8 +174,14 @@
   background: #fef3c7;
 }
 
+.row-differs {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+}
+
 .row-differs .spec-label {
   color: #92400e;
+  font-weight: 600;
 }
 
 .diff-indicator {
@@ -184,10 +191,21 @@
 }
 
 .best-badge {
-  display: block;
+  display: inline-block;
   font-size: 0.7rem;
   color: #059669;
-  margin-top: 0.25rem;
+  margin-left: 0.5rem;
+  background: #d1fae5;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.comparison-table tbody tr:first-of-type {
+  background: #f0fdf4;
+}
+
+.comparison-table tbody tr:first-of-type .spec-label {
+  color: #166534;
 }
 
 .comparison-footer {
