@@ -1,3 +1,4 @@
+import { useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/hooks';
 import './Header.css';
@@ -5,6 +6,17 @@ import './Header.css';
 export function Header() {
   const { state, dispatch } = useApp();
   const comparisonCount = state.comparisonIds.length;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      dispatch({ type: 'SET_SEARCH_QUERY', payload: value });
+    }, 300);
+  }, [dispatch]);
 
   return (
     <header className="header">
@@ -19,8 +31,8 @@ export function Header() {
             type="text"
             className="search-input"
             placeholder="Search laptops by brand, model, CPU, GPU..."
-            value={state.searchQuery}
-            onChange={(e) => dispatch({ type: 'SET_SEARCH_QUERY', payload: e.target.value })}
+            defaultValue={state.searchQuery}
+            onChange={handleInputChange}
           />
           <span className="search-icon">🔍</span>
         </div>
