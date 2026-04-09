@@ -313,4 +313,31 @@ function extractGpuBrand(gpu: string): string {
   return 'Other';
 }
 
+export interface SearchSuggestion {
+  id: string;
+  model_name: string;
+  brand: string;
+  cpu: string;
+  gpu: string;
+  price: number;
+}
+
+export async function searchSuggestions(query: string): Promise<SearchSuggestion[]> {
+  if (!query || query.length < 2) return [];
+
+  const url = `${API_BASE}/api/laptops?search=${encodeURIComponent(query)}&pageSize=5&sortField=price&sortOrder=asc`;
+  const response = await fetch(url);
+  if (!response.ok) return [];
+
+  const result: BackendResponse = await response.json();
+  return result.data.map(laptop => ({
+    id: String(laptop.id),
+    model_name: laptop.model_name,
+    brand: laptop.brand,
+    cpu: laptop.cpu,
+    gpu: laptop.gpu,
+    price: laptop.price,
+  }));
+}
+
 export { extractCpuBrand, extractGpuBrand };
