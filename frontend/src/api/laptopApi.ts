@@ -164,50 +164,124 @@ export async function searchLaptops(
   }
 
   const result: BackendResponse = await response.json();
+  const laptops = result.data.map(transformLaptop);
+
+  const facets = computeFacets(laptops);
 
   return {
-    laptops: result.data.map(transformLaptop),
+    laptops,
     total: result.pagination.total,
     page: result.pagination.page,
     pageSize: result.pagination.pageSize,
-    facets: {
-      brands: [],
-      cpuBrands: [],
-      gpuBrands: [],
-      ram: [],
-      storage: [],
-      displaySizes: [],
-      refreshRates: [],
-      sources: [],
-    },
+    facets,
+  };
+}
+
+function computeFacets(laptops: CanonicalLaptop[]): SearchResult['facets'] {
+  const brandCount = new Map<string, number>();
+  const cpuBrandCount = new Map<string, number>();
+  const gpuBrandCount = new Map<string, number>();
+  const ramCount = new Map<number, number>();
+  const storageCount = new Map<number, number>();
+  const displaySizeCount = new Map<number, number>();
+  const refreshRateCount = new Map<number, number>();
+  const sourceCount = new Map<string, number>();
+
+  for (const laptop of laptops) {
+    brandCount.set(laptop.brand, (brandCount.get(laptop.brand) || 0) + 1);
+    sourceCount.set(laptop.source, (sourceCount.get(laptop.source) || 0) + 1);
+
+    const cpuBrand = extractCpuBrand(laptop.cpu);
+    cpuBrandCount.set(cpuBrand, (cpuBrandCount.get(cpuBrand) || 0) + 1);
+
+    const gpuBrand = extractGpuBrand(laptop.gpu);
+    gpuBrandCount.set(gpuBrand, (gpuBrandCount.get(gpuBrand) || 0) + 1);
+
+    ramCount.set(laptop.ram, (ramCount.get(laptop.ram) || 0) + 1);
+    storageCount.set(laptop.storage, (storageCount.get(laptop.storage) || 0) + 1);
+
+    const displaySize = Math.round(laptop.display_size);
+    displaySizeCount.set(displaySize, (displaySizeCount.get(displaySize) || 0) + 1);
+
+    if (laptop.refresh_rate) {
+      refreshRateCount.set(laptop.refresh_rate, (refreshRateCount.get(laptop.refresh_rate) || 0) + 1);
+    }
+  }
+
+  return {
+    brands: Array.from(brandCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count),
+    cpuBrands: Array.from(cpuBrandCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count),
+    gpuBrands: Array.from(gpuBrandCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => b.count - a.count),
+    ram: Array.from(ramCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value - b.value),
+    storage: Array.from(storageCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value - b.value),
+    displaySizes: Array.from(displaySizeCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value - b.value),
+    refreshRates: Array.from(refreshRateCount.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((a, b) => a.value - b.value),
+    sources: Array.from(sourceCount.entries())
+      .map(([value, count]) => ({ value, count })),
   };
 }
 
 export async function getLaptopById(id: string): Promise<CanonicalLaptop | null> {
-  const url = `${API_BASE}/api/laptops?page=1&pageSize=100`;
+  for (let page = 1; page <= 10; page++) {
+    const url = `${API_BASE}/api/laptops?page=${page}&pageSize=100`;
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const result: BackendResponse = await response.json();
+    const laptop = result.data.find(l => String(l.id) === id);
+    if (laptop) {
+      return transformLaptop(laptop);
+    }
+
+    if (page >= result.pagination.totalPages) {
+      break;
+    }
   }
-
-  const result: BackendResponse = await response.json();
-  const laptop = result.data.find(l => String(l.id) === id);
-  return laptop ? transformLaptop(laptop) : null;
+  return null;
 }
 
 export async function getLaptopsByIds(ids: string[]): Promise<CanonicalLaptop[]> {
-  const url = `${API_BASE}/api/laptops?page=1&pageSize=100`;
+  const found: CanonicalLaptop[] = [];
+  const remainingIds = new Set(ids);
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  for (let page = 1; page <= 10 && remainingIds.size > 0; page++) {
+    const url = `${API_BASE}/api/laptops?page=${page}&pageSize=100`;
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const result: BackendResponse = await response.json();
+    const matched = result.data
+      .filter(l => remainingIds.has(String(l.id)))
+      .map(transformLaptop);
+
+    found.push(...matched);
+    matched.forEach(l => remainingIds.delete(l.id));
+
+    if (page >= result.pagination.totalPages) {
+      break;
+    }
   }
-
-  const result: BackendResponse = await response.json();
-  return result.data
-    .filter(l => ids.includes(String(l.id)))
-    .map(transformLaptop);
+  return found;
 }
 
 function extractCpuBrand(cpu: string): string {
