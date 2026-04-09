@@ -200,6 +200,25 @@
   border-radius: 4px;
 }
 
+.pct-diff {
+  display: inline-block;
+  font-size: 0.7rem;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.pct-better {
+  color: #059669;
+  background: #d1fae5;
+}
+
+.pct-worse {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
 .comparison-table tbody tr:first-of-type {
   background: #f0fdf4;
 }

@@ -151,6 +151,21 @@ export function Comparison() {
     return false;
   };
 
+  const getPercentageDiff = (laptop: CanonicalLaptop, key: string): number | null => {
+    const bestVal = bestValues[key];
+    const laptopVal = laptop[key as keyof CanonicalLaptop];
+    if (bestVal === undefined || bestVal === null || laptopVal === null || laptopVal === undefined) return null;
+    if (key === 'price' || key === 'weight') {
+      const diff = ((laptopVal as number) - (bestVal as number)) / (bestVal as number) * 100;
+      return Math.round(diff);
+    }
+    if (['ram', 'storage', 'refresh_rate', 'rating'].includes(key)) {
+      const diff = ((bestVal as number) - (laptopVal as number)) / (bestVal as number) * 100;
+      return Math.round(diff);
+    }
+    return null;
+  };
+
   const hasDifferences = (key: string): boolean => {
     const values = laptops.map(l => {
       const v = l[key as keyof CanonicalLaptop];
@@ -234,6 +249,7 @@ export function Comparison() {
                 {laptops.map(laptop => {
                   const value = getSpecValue(laptop, spec.key);
                   const best = isBest(laptop, spec.key);
+                  const pctDiff = differs && !best ? getPercentageDiff(laptop, spec.key) : null;
                   return (
                     <td
                       key={laptop.id}
@@ -241,6 +257,12 @@ export function Comparison() {
                     >
                       {value || (spec.key !== 'price' ? '—' : formatPrice(0))}
                       {best && spec.key !== 'price' && <span className="best-badge">★ Best</span>}
+                      {pctDiff !== null && pctDiff > 0 && (
+                        <span className="pct-diff pct-worse">+{pctDiff}%</span>
+                      )}
+                      {pctDiff !== null && pctDiff < 0 && (
+                        <span className="pct-diff pct-better">{pctDiff}%</span>
+                      )}
                     </td>
                   );
                 })}

@@ -203,11 +203,15 @@ export class FlipkartScraper {
     const discountMatch = discountEl?.match(/(\d+)%/);
     const discount = discountMatch ? parseInt(discountMatch[1], 10) || null : null;
 
-    const ratingEl = await page.locator('._2魏5PE span').textContent().catch(() => '');
+    const ratingEl = await page.locator('._1KFV8').textContent().catch(() =>
+      page.locator('.hGSR34').textContent().catch(() => '')
+    );
     const ratingMatch = ratingEl?.match(/([\d.]+)/);
     const rating = ratingMatch ? parseFloat(ratingMatch[1]) || null : null;
 
-    const reviewCountEl = await page.locator('._2魏5PE span span').first().textContent().catch(() => '');
+    const reviewCountEl = await page.locator('._1KFV8 span span').first().textContent().catch(() =>
+      page.locator('._2_RaDZ').textContent().catch(() => '')
+    );
     const reviewCountMatch = reviewCountEl?.match(/([\d,]+)/);
     const reviewCount = reviewCountMatch ? parseInt(reviewCountMatch[1].replace(/,/g, ''), 10) || null : null;
 
