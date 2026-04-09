@@ -45,6 +45,14 @@ export class CatalogStorage {
   private onUpsertCallback?: () => Promise<void>;
 
   constructor(connectionString: string, onUpsertCallback?: () => Promise<void>) {
+    if (!connectionString || typeof connectionString !== 'string') {
+      throw new Error('PostgreSQL connection string is required and must be a string');
+    }
+    try {
+      new URL(connectionString);
+    } catch {
+      throw new Error(`Invalid PostgreSQL connection string format: ${connectionString}`);
+    }
     this.pool = new Pool({ connectionString });
     this.onUpsertCallback = onUpsertCallback;
     this.initTable();

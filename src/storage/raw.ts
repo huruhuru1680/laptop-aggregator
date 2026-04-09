@@ -15,6 +15,14 @@ export class RawStorage {
   private pool: Pool;
 
   constructor(connectionString: string) {
+    if (!connectionString || typeof connectionString !== 'string') {
+      throw new Error('PostgreSQL connection string is required and must be a string');
+    }
+    try {
+      new URL(connectionString);
+    } catch {
+      throw new Error(`Invalid PostgreSQL connection string format: ${connectionString}`);
+    }
     this.pool = new Pool({ connectionString });
     this.initTable();
   }
