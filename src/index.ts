@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { ScrapeWorker, enqueueScrapeJob, scrapeQueue } from './queue/jobs';
 import { logger } from './utils/logger';
 

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { startServer } from './api/server';
 import { logger } from './utils/logger';
 

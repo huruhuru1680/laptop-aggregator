@@ -93,16 +93,57 @@ The normalized schema uses Zod for validation with these core fields:
 ### Prerequisites
 
 - Node.js 20+
-- Docker and Docker Compose (for infrastructure)
+- Docker and Docker Compose (optional, for infrastructure)
+- PostgreSQL 16+ (if running without Docker)
+- Redis 7+ (if running without Docker)
 - Ports: 3000 (API), 5432 (PostgreSQL), 6379 (Redis)
 
 ### 1. Start Infrastructure
 
+#### Option A: With Docker (Recommended)
+
 ```bash
-docker-compose up -d
+# Use Docker Compose v2 syntax (docker compose, not docker-compose)
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
+```
+
+#### Option B: Without Docker
+
+If you prefer to run PostgreSQL and Redis locally without Docker:
+
+**PostgreSQL Installation:**
+
+```bash
+# macOS (with Homebrew)
+brew install postgresql@16
+brew services start postgresql@16
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql-16
+
+# Create database and user
+psql -U postgres -c "CREATE USER laptop_user WITH PASSWORD 'laptop_password';"
+psql -U postgres -c "CREATE DATABASE laptop_aggregator OWNER laptop_user;"
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE laptop_aggregator TO laptop_user;"
+```
+
+**Redis Installation:**
+
+```bash
+# macOS (with Homebrew)
+brew install redis
+brew services start redis
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install redis-server
+
+# Start Redis
+redis-server --daemonize yes
 ```
 
 ### 2. Configure Environment
@@ -260,29 +301,43 @@ Restore from backup:
 The `docker-compose.yml` includes a production-ready setup:
 
 ```bash
-# Build and start all services
-docker-compose up -d
+# Build and start all services (use docker compose v2 syntax)
+docker compose up -d
 
 # View logs
-docker-compose logs -f api
+docker compose logs -f api
 
 # Scale scraper workers
-docker-compose up -d --scale scrape-worker=3
+docker compose up -d --scale scrape-worker=3
 ```
 
 ## Troubleshooting
 
 ```bash
 # View API logs
-docker-compose logs -f api
+docker compose logs -f api
 
 # View scraper logs
-docker-compose logs -f scrape-worker
+docker compose logs -f scrape-worker
 
 # Reset database
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 
 # Check Redis connectivity
-docker-compose exec api wget -qO- http://localhost:3000/ready
+docker compose exec api wget -qO- http://localhost:3000/ready
 ```
+
+## Verification
+
+Before starting infrastructure, verify the build works:
+
+```bash
+# Build backend and run tests
+npm run build && npm test
+
+# Build frontend
+cd frontend && npm run build
+```
+
+All tests should pass and builds should complete without errors.
