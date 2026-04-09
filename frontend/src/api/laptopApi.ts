@@ -126,16 +126,16 @@ function buildQueryParams(query: string, filters: Partial<LaptopFilters>, sort: 
 
   if (filters.storage && filters.storage.length > 0) {
     const minStorage = Math.min(...filters.storage);
-    const maxStorage = Math.max(...filters.storage) + 256;
+    const maxStorage = Math.max(...filters.storage);
     params.set('storageMin', String(minStorage));
     params.set('storageMax', String(maxStorage));
   }
 
   if (filters.displaySizes && filters.displaySizes.length > 0) {
     const minDisplay = Math.min(...filters.displaySizes);
-    const maxDisplay = Math.max(...filters.displaySizes) + 1;
+    const maxDisplay = Math.max(...filters.displaySizes);
     params.set('displaySizeMin', String(minDisplay));
-    params.set('displaySizeMax', String(maxDisplay));
+    params.set('displaySizeMax', String(maxDisplay + 1));
   }
 
   const { sortField, sortOrder } = transformSortOption(sort);
