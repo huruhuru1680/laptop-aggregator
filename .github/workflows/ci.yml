@@ -113,9 +113,58 @@ jobs:
     needs: docker
     if: github.ref == 'refs/heads/main'
     environment: production
+    env:
+      REGISTRY: ${{ env.REGISTRY }}
+      IMAGE_NAME: ${{ env.IMAGE_NAME }}
     steps:
-      - name: Deploy to server
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download docker-compose file
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: .
+
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v1
+        with:
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          known_hosts: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+
+      - name: Deploy to production server
         run: |
-          echo "Deploying to production..."
-          # Add your deployment logic here
-          # e.g., SSH to server and run docker-compose pull
+          ssh ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+            
+            # Pull latest image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            
+            # Backup current state
+            if [ -f docker-compose.yml ]; then
+              mkdir -p backups/manual
+              cp docker-compose.yml backups/manual/$(date +%Y%m%d_%H%M%S)_docker-compose.yml
+            fi
+            
+            # Create production .env if not exists
+            if [ ! -f .env ]; then
+              cp .env.example .env
+              # Update with production values via secrets
+              sed -i 's|POSTGRES_URL=.*|POSTGRES_URL=${{ secrets.POSTGRES_URL }}|' .env
+              sed -i 's|REDIS_URL=.*|REDIS_URL=${{ secrets.REDIS_URL }}|' .env
+            fi
+            
+            # Update docker-compose to use new image
+            sed -i 's|image: .*|image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}|' docker-compose.yml
+            
+            # Pull and restart services
+            docker-compose pull
+            docker-compose up -d --no-deps
+            
+            # Verify deployment
+            sleep 10
+            curl -f http://localhost:3000/health || exit 1
+            
+            echo "Deployment successful"
+          EOF

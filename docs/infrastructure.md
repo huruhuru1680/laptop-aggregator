@@ -60,15 +60,44 @@ This document describes the production infrastructure for the Laptop Aggregator 
 ## Security
 
 ### Implemented
-- Helmet.js security headers
+- Helmet.js security headers (X-Frame-Options, X-Content-Type-Options, CSP, etc.)
 - CORS enabled for cross-origin requests
 - Rate limiting: 100 requests/minute per IP via Redis
 - Redis-based distributed rate limiting
+- Non-root user in Docker containers (USER node directive)
+- PostgreSQL password authentication
+- Health check endpoints for monitoring
 
-### Production Requirements
-- HTTPS via Nginx reverse proxy (not included in this repo)
-- Environment variables for secrets (REDIS_URL, POSTGRES_URL)
-- Regular security updates via Dependabot
+### Production Hardening Requirements
+- **HTTPS**: Deploy behind Nginx/Traefik with TLS termination
+- **Secrets Management**: Use environment variables or secrets manager
+  - `POSTGRES_PASSWORD` - PostgreSQL password
+  - `REDIS_URL` - Redis connection URL
+  - `GRAFANA_PASSWORD` - Grafana admin password
+- **Network Isolation**: Use Docker network segmentation
+- **Container Security**:
+  - Read-only root filesystems where possible
+  - Resource limits on all services
+  - No privileged containers
+- **Dependency Updates**: Enable Dependabot for security patches
+- **SSL/TLS**: Minimum TLS 1.2, disable older protocols
+- **Database**:
+  - max_connections=100
+  - shared_buffers=256MB
+  - wal_level=replica for point-in-time recovery
+- **Redis**:
+  - maxmemory=256mb with allkeys-lru eviction
+  - AOF persistence enabled
+  - Password authentication recommended for production
+
+### Security Headers (via Helmet.js)
+```
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'
+```
 
 ## Monitoring
 
@@ -85,6 +114,16 @@ This document describes the production infrastructure for the Laptop Aggregator 
 - `HighCacheMissRate`: Cache miss rate > 50%
 - `ServiceDown`: API unreachable for 1 minute
 - `RateLimitActive`: Rate limiting triggered
+- `DatabaseConnectionPoolExhausted`: PostgreSQL connection pool errors
+- `ScraperJobBacklog`: >100 pending scrape jobs for 15 minutes
+- `LowDataFreshness`: No laptops scraped in 24 hours
+- `HighDuplicateLaptopRate`: >30% duplicate upserts in 1 hour
+- `RedisMemoryHigh`: Redis memory usage >90% of max
+- `RedisConnectionErrors`: Redis connection errors detected
+
+### Dashboards
+- **Grafana Dashboard**: `grafana/dashboards/api.json`
+- **Panels**: Request Rate, Request Latency (p95), Error Rate, Active Connections, Cache Hit/Miss Ratio
 
 ## Deployment
 

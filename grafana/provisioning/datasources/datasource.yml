@@ -8,3 +8,17 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+  - name: PrometheusRemote
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: $PROMETHEUS_REMOTE_URL
+    isDefault: false
+    editable: true
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s
+    enabled: false

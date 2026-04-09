@@ -45,3 +45,57 @@ groups:
         annotations:
           summary: "Rate limiting is being triggered"
           description: "{{ $value }} rejected requests/sec due to rate limiting"
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: rate(postgresql_connection_pool_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "PostgreSQL connection pool errors detected"
+
+      - alert: ScraperJobBacklog
+        expr: scrape_queue_size > 100
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scraper job backlog growing"
+          description: "There are {{ $value }} pending scrape jobs"
+
+      - alert: LowDataFreshness
+        expr: time() - max(laptop_last_scraped_timestamp) > 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "Laptop data may be stale"
+          description: "No laptops scraped in the last 24 hours"
+
+      - alert: HighDuplicateLaptopRate
+        expr: rate(duplicate_laptop_upserts_total[1h]) / rate(laptop_upserts_total[1h]) > 0.3
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High duplicate laptop detection rate"
+          description: "More than 30% of upserts are duplicates in the last hour"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_maxmemory_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using {{ $value | humanizePercentage }} of max memory"
+
+      - alert: RedisConnectionErrors
+        expr: rate(redis_connection_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis connection errors detected"
+          description: "{{ $value }} Redis connection errors/sec"
